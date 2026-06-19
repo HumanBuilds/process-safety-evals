@@ -1,0 +1,57 @@
+[project]
+name = "process-safety-evals"
+version = "0.1.0"
+description = "An Inspect eval for process-safety reasoning and UK safety-regulation knowledge."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Josh", email = "josh@humanbuilds.dev" }]
+dependencies = [
+    "anthropic==0.111.0",
+    "inspect-ai==0.3.240",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff==0.9.6",
+    "mypy==1.15.0",
+    "pytest==8.3.4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/process_safety"]
+
+# Register the eval tasks with Inspect so the package's @task defs are discoverable.
+[project.entry-points.inspect_ai]
+process_safety = "process_safety"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+pythonpath = ["src"]

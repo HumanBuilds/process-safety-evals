@@ -1,0 +1,27 @@
+# Environments & secrets
+.venv/
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Editor / agent local state
+.claude/
+.vscode/
+.idea/
+
+# Tooling caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Inspect eval logs (a curated sample may be force-added under logs/ for provenance)
+logs/*
+!logs/.gitkeep
