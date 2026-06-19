@@ -89,6 +89,11 @@ items (2 per category) × 3 epochs = 36 graded trials. Accuracy counts partial-c
 as 0.5. These numbers are illustrative of the eval, not a leaderboard claim — a single
 small-model run on a small dataset.
 
+The runs behind this table are committed for provenance — open them with `inspect view` to
+replay every transcript and the grader's reasoning:
+[MCQ log](logs/2026-06-19T13-58-36-00-00_process-safety-mcq_DeqSyKorQbtS9iyBSKjDnd.eval) ·
+[reasoning log (3 epochs)](logs/2026-06-19T14-26-54-00-00_process-safety-reasoning_6guq3rVzym4rU3GwpkF7or.eval).
+
 ## Methodology
 
 - **Why 3 epochs for the reasoning variant.** With a deterministic `choice()` scorer at
