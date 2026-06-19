@@ -6,13 +6,17 @@ bridged with a single Pydantic model, :class:`ProcessSafetyMetadata`. ``record_t
 funnels each row *through* the model on the way in, so a malformed row (e.g. an unknown
 ``category``) fails validation at load time rather than surfacing later inside a scorer.
 Solvers and scorers read the metadata back out, typed, via ``sample.metadata_as(...)``.
+
+The authored JSONL stores answers as the full option text and questions under ``question``;
+``record_to_sample`` adapts these to Inspect's ``Sample`` shape (``input``, and a ``target``
+letter for the deterministic ``choice()`` scorer).
 """
 
 from pathlib import Path
 from typing import Any, Literal
 
 from inspect_ai.dataset import Dataset, Sample, json_dataset
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 # Dataset location exposed as a module constant (an inspect_evals convention).
 DATASET_PATH = Path(__file__).parent / "data" / "process_safety.jsonl"
@@ -20,18 +24,50 @@ DATASET_PATH = Path(__file__).parent / "data" / "process_safety.jsonl"
 # Closed string sets: mypy rejects an invalid literal in source, and Pydantic rejects an
 # invalid value in the data file, while the JSONL stores the bare string (no Enum mapping).
 Variant = Literal["mcq", "reasoning"]
-Category = Literal["DSEAR", "COSHH", "CLP", "hierarchy-of-control"]
+Category = Literal[
+    "clp-classification",
+    "dsear",
+    "coshh",
+    "hierarchy-of-control",
+    "risk-assessment-duties",
+    "process-safety-method",
+]
+Difficulty = Literal["easy", "medium", "hard"]
+Confidence = Literal["low", "medium", "high"]
 
 
 class ProcessSafetyMetadata(BaseModel):
     """Typed view of a sample's metadata, hydrated via ``Sample.metadata_as``."""
 
+    # Inspect's metadata_as() requires the model to be frozen.
+    model_config = ConfigDict(frozen=True)
+
     variant: Variant
     category: Category
-    # Grading rubric for the model-graded reasoning variant; empty for mcq items.
-    criterion: str = ""
     # Provenance: the regulation or standard the item derives from.
-    source: str = ""
+    source: str
+    difficulty: Difficulty
+    confidence: Confidence
+    # Authoring notes / verification caveats; not shown to the model under test.
+    expert_notes: str = ""
+    # Grading rubric for the model-graded reasoning variant (empty for mcq items). Also
+    # carried as the Sample target for reasoning items so model_graded_qa can grade against it.
+    criterion: str = ""
+    # Per-distractor explanations for mcq items (None for reasoning items).
+    distractor_rationale: dict[str, str] | None = None
+
+
+def _answer_to_target_letter(answer: str, choices: list[str]) -> str:
+    """Map an mcq answer (full option text) to its choice letter (A, B, C, ...).
+
+    ``choice()`` scores against the option letter, so the stored answer text must resolve to
+    exactly one choice; a mismatch is a dataset error and is raised immediately.
+    """
+    try:
+        index = choices.index(answer)
+    except ValueError as exc:
+        raise ValueError(f"answer {answer!r} is not one of choices {choices!r}") from exc
+    return chr(ord("A") + index)
 
 
 def record_to_sample(record: dict[str, Any]) -> Sample:
@@ -40,17 +76,34 @@ def record_to_sample(record: dict[str, Any]) -> Sample:
     Validating the metadata through :class:`ProcessSafetyMetadata` here means a malformed
     row fails loudly at load time, with the offending field named.
     """
+    variant: Variant = record["variant"]
+    choices: list[str] | None = record.get("choices")
+    criterion: str = record.get("criterion", "")
+
     metadata = ProcessSafetyMetadata(
-        variant=record["variant"],
+        variant=variant,
         category=record["category"],
-        criterion=record.get("criterion", ""),
-        source=record.get("source", ""),
+        source=record["source"],
+        difficulty=record["difficulty"],
+        confidence=record["confidence"],
+        expert_notes=record.get("expert_notes", ""),
+        criterion=criterion,
+        distractor_rationale=record.get("distractor_rationale"),
     )
+
+    if variant == "mcq":
+        if choices is None:
+            raise ValueError(f"mcq item {record['id']!r} is missing 'choices'")
+        target = _answer_to_target_letter(record["answer"], choices)
+    else:
+        # Reasoning items are graded against the rubric rather than a fixed answer.
+        target = criterion
+
     return Sample(
         id=record["id"],
-        input=record["input"],
-        target=record["target"],
-        choices=record.get("choices"),
+        input=record["question"],
+        target=target,
+        choices=choices,
         metadata=metadata.model_dump(),
     )
 

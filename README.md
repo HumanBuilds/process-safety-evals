@@ -38,7 +38,7 @@ item records the regulation or standard it derives from in its `source` field.
 | --- | --- |
 | Packaging, tooling (ruff, mypy, pytest), pinned dependencies | Done |
 | Typed dataset loader (`record_to_sample`, `metadata_as` contract) | Done |
-| Hand-authored dataset (`process_safety.jsonl`) | In progress |
+| Hand-authored dataset (`process_safety.jsonl`, 25 mcq + 12 reasoning) | Done |
 | Task definitions, solvers, scorers | Planned |
 | End-to-end tests (`mockllm/model`) and CI | Planned |
 | Results table for a frontier model | Planned |
