@@ -36,6 +36,10 @@ Both variants run over a single hand-authored dataset (`src/process_safety/data/
 - **Per-category reporting.** Both tasks attach `grouped(accuracy(), "category")` and
   `grouped(stderr(), "category")`, so results break down per regulatory category rather than
   collapsing to a single headline number that could hide a category-level weakness.
+- **Shuffled answer positions.** MCQ items are authored with the correct option first, so the
+  loader shuffles each item's choices (fixed seed, for reproducibility) before scoring. Without
+  this, a model that simply always picked "A" would score 100%; shuffling ensures the MCQ
+  number measures reasoning rather than answer-position bias.
 - **Hand-authored, for contamination resistance.** The dataset is written from domain
   expertise rather than scraped, so items are unlikely to appear in any model's training
   data. Every item records the regulation or standard it derives from in its `source` field
@@ -84,14 +88,15 @@ Reasoning: 3 epochs (see *Methodology* below).
 | `process-safety-method` | 1.000 (±0.000) | 0.917 (±0.083) |
 | **Overall** | **0.920 (±0.055)** | **0.806 (±0.064)** |
 
-MCQ: n = 25 items (5 in `clp-classification`, 4 in each other category). Reasoning: n = 12
-items (2 per category) × 3 epochs = 36 graded trials. Accuracy counts partial-credit grades
-as 0.5. These numbers are illustrative of the eval, not a leaderboard claim — a single
-small-model run on a small dataset.
+MCQ: n = 25 items (5 in `clp-classification`, 4 in each other category), answer positions
+shuffled. Reasoning: n = 12 items (2 per category) × 3 epochs = 36 graded trials. Accuracy
+counts partial-credit grades as 0.5. These numbers are illustrative of the eval, not a
+leaderboard claim — a single small-model run on a small dataset. The MCQ score is unchanged
+with choices shuffled, indicating it reflects reasoning rather than answer-position bias.
 
 The runs behind this table are committed for provenance — open them with `inspect view` to
 replay every transcript and the grader's reasoning:
-[MCQ log](logs/2026-06-19T13-58-36-00-00_process-safety-mcq_DeqSyKorQbtS9iyBSKjDnd.eval) ·
+[MCQ log](logs/2026-06-19T15-03-49-00-00_process-safety-mcq_UgYJZE8pvSg95HXUptfcZK.eval) ·
 [reasoning log (3 epochs)](logs/2026-06-19T14-26-54-00-00_process-safety-reasoning_6guq3rVzym4rU3GwpkF7or.eval).
 
 ## Methodology
