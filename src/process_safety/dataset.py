@@ -21,6 +21,13 @@ from pydantic import BaseModel, ConfigDict
 # Dataset location exposed as a module constant (an inspect_evals convention).
 DATASET_PATH = Path(__file__).parent / "data" / "process_safety.jsonl"
 
+# Choice order is shuffled per sample to remove answer-position bias: the items are authored
+# with the correct option first, so without shuffling a model could score well by always
+# picking "A". A fixed seed keeps the shuffle reproducible run to run (mirroring temperature=0);
+# shuffle_choices remaps each sample's letter target accordingly and is a no-op for reasoning
+# items, which have no choices.
+CHOICE_SHUFFLE_SEED = 20260619
+
 # Closed string sets: mypy rejects an invalid literal in source, and Pydantic rejects an
 # invalid value in the data file, while the JSONL stores the bare string (no Enum mapping).
 Variant = Literal["mcq", "reasoning"]
@@ -110,5 +117,9 @@ def record_to_sample(record: dict[str, Any]) -> Sample:
 
 def load(variant: Variant) -> Dataset:
     """Load the dataset filtered to a single variant ("mcq" or "reasoning")."""
-    ds = json_dataset(str(DATASET_PATH), sample_fields=record_to_sample)
+    ds = json_dataset(
+        str(DATASET_PATH),
+        sample_fields=record_to_sample,
+        shuffle_choices=CHOICE_SHUFFLE_SEED,
+    )
     return ds.filter(lambda s: s.metadata_as(ProcessSafetyMetadata).variant == variant)
