@@ -7,6 +7,11 @@ and UK safety regulation. Two task variants share one hand-authored dataset:
   choice), scored deterministically with ``choice()``.
 - ``process_safety_reasoning`` — failure-mode reasoning (free response), scored with
   ``model_graded_qa()`` against a hand-authored rubric.
+
+The tasks are imported here so the ``inspect_ai`` entry point (see ``pyproject.toml``)
+registers them for discovery, e.g. ``inspect eval process_safety/process_safety_mcq``.
 """
 
-__all__: list[str] = []
+from .task import process_safety_mcq, process_safety_reasoning
+
+__all__: list[str] = ["process_safety_mcq", "process_safety_reasoning"]
