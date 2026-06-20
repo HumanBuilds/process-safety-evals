@@ -1,0 +1,28 @@
+WORKPLACE EXPOSURE LIMITS — SITE REFERENCE EXTRACT
+(Internal training summary; concept-level, modelled on HSE EH40/2005.)
+
+A Workplace Exposure Limit (WEL) is the maximum concentration of an airborne
+substance, averaged over a specified reference period, to which workers may be
+exposed. GB WELs are listed in HSE document EH40/2005 and are enforced under the
+Control of Substances Hazardous to Health Regulations 2002 (COSHH).
+
+Two reference periods are used:
+
+  * Long-term WEL  — an 8-hour time-weighted average (TWA). This is the headline
+    limit for chronic exposure. The 8-hour TWA weights each measured concentration
+    by the time spent at it, averaged across a nominal 8-hour (480-minute) working
+    day. Periods of no exposure within the shift count as zero and still occupy
+    their share of the 480 minutes.
+
+  * Short-term WEL — a 15-minute TWA (the STEL), used to control brief excursions.
+    It is a SEPARATE limit and is not interchangeable with the 8-hour TWA.
+
+A naive arithmetic mean of the sampled concentrations is NOT the 8-hour TWA: the
+durations differ, so the readings must be time-weighted.
+
+Selected long-term WELs (8-hour TWA), fictional substances for training:
+
+  Substance   Long-term WEL (8-hr TWA)   Short-term WEL (15-min STEL)
+  ---------   -----------------------   ---------------------------
+  Theymol     50 mg/m3                  150 mg/m3
+  (Other substances are listed in their own material-data files.)

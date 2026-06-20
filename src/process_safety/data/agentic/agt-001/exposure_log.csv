@@ -1,0 +1,5 @@
+interval_start,interval_end,duration_min,substance,concentration_mg_m3,sampler_id
+08:00,10:00,120,Theymol,40,PS-114
+10:00,12:00,120,Theymol,70,PS-114
+12:00,13:00,60,Theymol,0,PS-114
+13:00,16:00,180,Theymol,55,PS-114
