@@ -17,6 +17,9 @@ dist/
 .vscode/
 .idea/
 
+# Personal working files — not part of the eval
+*.xlsx
+
 # Tooling caches
 .mypy_cache/
 .ruff_cache/

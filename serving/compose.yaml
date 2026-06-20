@@ -1,0 +1,41 @@
+# Local open-weights serving for the Phase 3 model comparison.
+#
+# Serves a small open-weights model behind an OpenAI-compatible API on
+# localhost:8000. Inspect's `vllm/` provider attaches to it over HTTP (it does
+# NOT import vLLM in-process) when VLLM_BASE_URL points here — so vLLM only ever
+# runs inside this container and never needs to install on the Windows host.
+#
+#   Start:  docker compose -f serving/compose.yaml up
+#   Stop:   Ctrl-C, then  docker compose -f serving/compose.yaml down
+#
+# Then, on the host:
+#   VLLM_BASE_URL=http://localhost:8000/v1 \
+#   uv run inspect eval src/process_safety/task.py@process_safety_mcq \
+#     --model vllm/Qwen/Qwen2.5-3B-Instruct
+#
+# The model is overridable: `VLLM_MODEL=Qwen/Qwen2.5-7B-Instruct docker compose ...`.
+services:
+  vllm:
+    # Official CPU image (prebuilt on Docker Hub since Jan 2026). Pinned to a tag
+    # here; serving/README.md records the resolved image digest + model revision
+    # actually used for the committed results, which is what makes a run reproducible.
+    image: vllm/vllm-openai-cpu:latest-x86_64
+    container_name: process-safety-vllm
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist the Hugging Face cache so re-runs reuse downloaded weights.
+      - hf-cache:/root/.cache/huggingface
+    environment:
+      # Scratch space (GiB) the CPU backend reserves for the KV cache. Our prompts
+      # are short, so a small cache is plenty and keeps RAM use modest.
+      VLLM_CPU_KVCACHE_SPACE: "8"
+    command:
+      - "--model=${VLLM_MODEL:-Qwen/Qwen2.5-3B-Instruct}"
+      - "--served-model-name=${VLLM_MODEL:-Qwen/Qwen2.5-3B-Instruct}"
+      # Cap context well below the model's max: the KV cache is sized from this, and
+      # our longest reasoning prompt is a few hundred tokens, so 8k is generous.
+      - "--max-model-len=8192"
+
+volumes:
+  hf-cache:

@@ -71,7 +71,10 @@ uv run inspect view
 Models can be overridden on the command line, e.g.
 `--model anthropic/claude-sonnet-4-6 --model-role grader=anthropic/claude-opus-4-8`.
 
-## Results
+To run the same variants against a locally-served open-weights model instead of the API,
+see [`serving/`](serving/README.md), which starts a vLLM container and points Inspect at it.
+
+## Results (frontier baseline)
 
 Model under test: **`anthropic/claude-haiku-4-5`** at `temperature=0`. Reasoning grader:
 **`anthropic/claude-sonnet-4-6`** (a separate, stronger model). Run date: **2026-06-19**,
@@ -99,6 +102,67 @@ replay every transcript and the grader's reasoning:
 [MCQ log](logs/2026-06-19T15-03-49-00-00_process-safety-mcq_UgYJZE8pvSg95HXUptfcZK.eval) ·
 [reasoning log (3 epochs)](logs/2026-06-19T14-26-54-00-00_process-safety-reasoning_6guq3rVzym4rU3GwpkF7or.eval).
 
+## Local open-weights comparison
+
+Both variants also run **unchanged** against a locally-served open-weights model,
+**`Qwen/Qwen2.5-3B-Instruct`** (Apache-2.0), served with vLLM behind an OpenAI-compatible
+endpoint — see [`serving/`](serving/README.md) for the container, reproducibility pins, and
+operational notes. Inspect attaches over HTTP through its `vllm/` provider, so only the
+model under test changes. For the reasoning variant the grader is held constant at the
+frontier `claude-sonnet-4-6`, so any gap reflects the model under test rather than the judge.
+
+The tables below are regenerated from the committed logs by
+[`scripts/compare_runs.py`](scripts/compare_runs.py), not transcribed by hand.
+
+**MCQ** — deterministic `choice()`, 1 epoch:
+
+| Category | Frontier — Haiku | Local — Qwen2.5-3B |
+| --- | --- | --- |
+| `clp-classification` | 1.000 (±0.000) | 0.200 (±0.200) |
+| `dsear` | 0.750 (±0.250) | 0.750 (±0.250) |
+| `coshh` | 0.750 (±0.250) | 0.750 (±0.250) |
+| `hierarchy-of-control` | 1.000 (±0.000) | 1.000 (±0.000) |
+| `risk-assessment-duties` | 1.000 (±0.000) | 0.750 (±0.250) |
+| `process-safety-method` | 1.000 (±0.000) | 1.000 (±0.000) |
+| **Overall** | **0.920 (±0.055)** | **0.720 (±0.092)** |
+
+**Reasoning** — model-graded by `claude-sonnet-4-6`, 3 epochs:
+
+| Category | Frontier — Haiku | Local — Qwen2.5-3B |
+| --- | --- | --- |
+| `clp-classification` | 0.750 (±0.250) | 0.583 (±0.417) |
+| `dsear` | 1.000 (±0.000) | 0.500 (±0.000) |
+| `coshh` | 0.750 (±0.250) | 0.500 (±0.000) |
+| `hierarchy-of-control` | 0.833 (±0.167) | 0.583 (±0.083) |
+| `risk-assessment-duties` | 0.583 (±0.083) | 0.500 (±0.000) |
+| `process-safety-method` | 0.917 (±0.083) | 0.500 (±0.000) |
+| **Overall** | **0.806 (±0.064)** | **0.528 (±0.054)** |
+
+Two patterns stand out:
+
+- **MCQ — the gap is concentrated, not diffuse.** Qwen matches the frontier model on four of
+  six categories and collapses almost entirely on `clp-classification` (1.000 → 0.200).
+  Assigning GHS hazard classes and categories is precise recall the small model lacks, while
+  it keeps pace on the more reasoning-shaped categories; the 20-point overall gap is largely
+  that one category.
+- **Reasoning — a stable partial-credit ceiling.** Most local cells sit at exactly
+  0.500 (±0.000): across all three epochs the grader consistently awarded *partial* credit,
+  because the model identifies the hazard domain but misses the governing regulation or the
+  specific safeguard. The zero standard error marks this as a capability ceiling, not grader
+  noise.
+
+**Grader sensitivity (why the grader is held frontier).** Re-grading the *same* local-model
+answers with the local 3B in the grader seat raises the reasoning score from **0.528** to
+**0.750** — the weaker judge cannot reliably tell when an answer omits the governing
+regulation, so it is markedly more lenient ([log](logs/2026-06-20T16-39-55-00-00_process-safety-reasoning_4yzXsnYMu224F2ZxcHPq2Z.eval),
+1 epoch). Degrading both seats together would mask the capability gap, which is why the
+headline comparison swaps only the model under test.
+
+The local runs are committed for provenance (replay with `inspect view`):
+[MCQ](logs/2026-06-20T15-57-32-00-00_process-safety-mcq_C7drrLJBwkCX9WgruuPFgF.eval) ·
+[reasoning, frontier grader](logs/2026-06-20T16-06-46-00-00_process-safety-reasoning_fBdBNn3T3FtQcbfUAki3ng.eval) ·
+[reasoning, local grader](logs/2026-06-20T16-39-55-00-00_process-safety-reasoning_4yzXsnYMu224F2ZxcHPq2Z.eval).
+
 ## Methodology
 
 - **Why 3 epochs for the reasoning variant.** With a deterministic `choice()` scorer at
@@ -122,9 +186,11 @@ replay every transcript and the grader's reasoning:
   intended signal, not scale.
 - **Single grader.** One grader model is a single point of judgement. Borderline items
   (above) would benefit from rubric tightening and, at larger scale, a multi-grader or
-  human-adjudicated panel.
-- **Phase 3 (planned).** Compare a local open-weights model against the frontier baseline.
-- **Phase 4 (planned).** Register the eval in [`inspect_evals`](https://github.com/UKGovernmentBEIS/inspect_evals).
+  human-adjudicated panel. The [grader-sensitivity result](#local-open-weights-comparison)
+  shows how much judge capability alone can move the score.
+- **Next: registration.** The eval is built to the [`inspect_evals`](https://github.com/UKGovernmentBEIS/inspect_evals)
+  contributing conventions (README template, `mockllm/model` tests, pinned deps, justified
+  epochs, per-category results) so it can be registered there as an external eval.
 
 ### Grader drift & contamination resistance
 
