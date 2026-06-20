@@ -1,15 +1,15 @@
 """Dataset loading for the process-safety eval.
 
-Records cross two untyped boundaries: the raw row read from JSONL is a ``dict[str, Any]``,
-and ``Sample.metadata`` is itself a ``dict[str, Any]`` at the storage layer. Both are
-bridged with a single Pydantic model, :class:`ProcessSafetyMetadata`. ``record_to_sample``
-funnels each row *through* the model on the way in, so a malformed row (e.g. an unknown
-``category``) fails validation at load time rather than surfacing later inside a scorer.
-Solvers and scorers read the metadata back out, typed, via ``sample.metadata_as(...)``.
+Records cross two untyped boundaries: the raw row read from JSONL is a ``dict[str, Any]``, and
+``Sample.metadata`` is itself a ``dict[str, Any]`` at the storage layer. Both go through one
+Pydantic model, :class:`ProcessSafetyMetadata`. ``record_to_sample`` runs each row through it on
+the way in, so a malformed row (e.g. an unknown ``category``) fails validation at load time
+rather than later inside a scorer. Solvers and scorers read the metadata back out, typed, via
+``sample.metadata_as(...)``.
 
-The authored JSONL stores answers as the full option text and questions under ``question``;
-``record_to_sample`` adapts these to Inspect's ``Sample`` shape (``input``, and a ``target``
-letter for the deterministic ``choice()`` scorer).
+The JSONL stores answers as the full option text and questions under ``question``;
+``record_to_sample`` adapts these to Inspect's ``Sample`` shape (``input``, plus a ``target``
+letter for the ``choice()`` scorer).
 """
 
 from pathlib import Path
