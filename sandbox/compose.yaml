@@ -1,0 +1,33 @@
+# Docker sandbox for the agentic process-safety variant (process_safety_agentic).
+#
+# The model under test gets `bash` and `python` tools that execute INSIDE this container.
+# Inspect issues every command from OUTSIDE the sandbox (inference does not run in here), so
+# the container is an untrusted execution environment: everything the model can do is bounded
+# by what this file allows.
+#
+# What each setting buys:
+#   - network_mode: none  -> no internet. The model can only use the scenario files Inspect
+#     copies in (Sample.files -> /data). It can't fetch the real regulation, phone home, or be
+#     influenced by anything off-box.
+#   - read-only root + writable tmpfs -> the image's binaries and libraries are immutable; the
+#     model gets writable scratch only where it's needed. /data holds each sample's scenario
+#     files, /tmp is general scratch, and /root is the shell/Python home (so `bash --login` and
+#     `python3` have a writable HOME). Everything else is read-only, so the model can't tamper
+#     with the toolchain.
+#   - cpus / mem_limit -> a runaway computation can't starve the host.
+#
+# Only the Python standard library is available (no pip at runtime, since there's no network).
+# Scenarios are written so stdlib (csv, statistics) is enough.
+services:
+  default:
+    image: python:3.12-slim
+    init: true
+    command: ["tail", "-f", "/dev/null"] # idle; Inspect exec()s commands into it
+    network_mode: none
+    read_only: true
+    tmpfs:
+      - /data:size=16m # Inspect copies Sample.files here; must be writable
+      - /tmp:size=64m
+      - /root:size=16m # writable HOME for bash --login / python3
+    cpus: 1.0
+    mem_limit: 1gb

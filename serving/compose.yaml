@@ -1,4 +1,4 @@
-# Local open-weights serving for the Phase 3 model comparison.
+# Local open-weights serving for the open-weights vs frontier model comparison.
 #
 # Serves a small open-weights model behind an OpenAI-compatible API on
 # localhost:8000. Inspect's `vllm/` provider attaches to it over HTTP (it does
@@ -22,7 +22,7 @@ services:
     image: vllm/vllm-openai-cpu:latest-x86_64
     container_name: process-safety-vllm
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       # Persist the Hugging Face cache so re-runs reuse downloaded weights.
       - hf-cache:/root/.cache/huggingface
@@ -36,6 +36,13 @@ services:
       # Cap context well below the model's max: the KV cache is sized from this, and
       # our longest reasoning prompt is a few hundred tokens, so 8k is generous.
       - "--max-model-len=8192"
+      # Enable OpenAI-style tool calling so the agentic variant (process_safety_agentic)
+      # works against this endpoint. Without these, vLLM rejects tool_choice="auto" with a
+      # 400. These flags are additive — the plain-generation MCQ/reasoning variants are
+      # unaffected. The parser is model-family specific; Qwen2.5-Instruct uses Hermes-style
+      # function-call tags, hence the "hermes" parser.
+      - "--enable-auto-tool-choice"
+      - "--tool-call-parser=hermes"
 
 volumes:
   hf-cache:
